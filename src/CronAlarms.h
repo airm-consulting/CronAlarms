@@ -28,6 +28,10 @@ typedef CronID_t CronId;  // Arduino friendly name
 #define dtINVALID_ALARM_ID 255
 #define dtINVALID_TIME     (time_t)(-1)
 
+typedef struct tm DateTime_t;
+DateTime_t getTime();
+time_t StructToUnix(DateTime_t d);
+
 typedef void (*OnTick_t)();  // alarm callback function typedef
 
 // class defining an alarm instance, only used by dtAlarmsClass
