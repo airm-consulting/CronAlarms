@@ -75,7 +75,7 @@ CronClass::CronClass()
   }
 }
 
-CronClass::attachgetTimeCallback(time_t (*getTimeFunc) (void))
+void CronClass::attachgetTimeCallback(time_t (*getTimeFunc) (void))
 {
   getTimeFuncPtr = getTimeFunc;
 }
