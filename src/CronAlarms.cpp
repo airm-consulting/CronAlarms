@@ -177,7 +177,7 @@ void CronClass::serviceAlarms()
   if (globalEnabled && !isServicing) {
     isServicing = true;
     for (servicedCronId = 0; servicedCronId < dtNBR_ALARMS; servicedCronId++) {
-      if (Alarm[servicedCronId].isEnabled && (getTimeCallback) >= Alarm[servicedCronId].nextTrigger)) {
+      if (Alarm[servicedCronId].isEnabled && (getTimeCallback() >= Alarm[servicedCronId].nextTrigger)) {
         OnTick_t TickHandler = Alarm[servicedCronId].onTickHandler;
         if (Alarm[servicedCronId].isOneShot) {
           free(servicedCronId);  // free the ID if mode is OnShot
