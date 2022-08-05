@@ -49,9 +49,9 @@ void CronEventClass::updateNextTrigger(bool forced)
 {
   if (isEnabled) {
     time_t timenow;
-    if (getTimeFuncPtr)
+    if (getTimeCallback)
     {
-      timenow = getTimeFuncPtr();  
+      timenow = getTimeCallback();  
     }
     else
     {
@@ -75,9 +75,12 @@ CronClass::CronClass()
   }
 }
 
-void CronClass::attachgetTimeCallback(time_t (*getTimeFunc) (void))
+void CronClass::attachgetTimeCallback(getTime_t getTimeFunc)
 {
-  getTimeFuncPtr = getTimeFunc;
+  for (int i=0; i<dtNBR_ALARMS; i++)
+  {
+    Alarm[i].getTimeCallback = getTimeFunc;
+  }
 }
 
 void CronClass::globalUpdateNextTrigger()
