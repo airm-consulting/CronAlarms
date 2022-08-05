@@ -29,6 +29,10 @@ extern "C" {
 #include "ccronexpr/ccronexpr.h"
 }
 
+time_t defaultgetTimeFunc()
+{
+  return time(nullptr);
+}
 
 //**************************************************************
 //* Cron Event Class Constructor

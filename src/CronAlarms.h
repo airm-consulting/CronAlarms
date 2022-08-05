@@ -30,7 +30,7 @@ typedef CronID_t CronId;  // Arduino friendly name
 
 typedef void (*OnTick_t)();  // alarm callback function typedef
 typedef time_t (*getTime_t) ();
-time_t defaultgetTimeFunc() {return time(nullptr);}
+extern time_t defaultgetTimeFunc();
 
 // class defining an alarm instance, only used by dtAlarmsClass
 class CronEventClass
