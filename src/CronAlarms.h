@@ -28,10 +28,6 @@ typedef CronID_t CronId;  // Arduino friendly name
 #define dtINVALID_ALARM_ID 255
 #define dtINVALID_TIME     (time_t)(-1)
 
-typedef struct tm DateTime_t;
-DateTime_t getTime();
-time_t StructToUnix(DateTime_t d);
-
 typedef void (*OnTick_t)();  // alarm callback function typedef
 
 // class defining an alarm instance, only used by dtAlarmsClass
@@ -56,10 +52,12 @@ private:
   uint8_t servicedCronId; // the alarm currently being serviced
   bool globalEnabled = true;
   void serviceAlarms();
+  time_t (*getTimeFuncptr) (void); 
 
 public:
   CronClass();
 
+  void attachgetTimeCallback(time_t (*getTimeFunc) (void));
   // Function to create alarms and timers with cron
   CronID_t create(const char * cronstring, OnTick_t onTickHandler, bool isOneShot);
   // isOneShot - trigger once at the given time in the future

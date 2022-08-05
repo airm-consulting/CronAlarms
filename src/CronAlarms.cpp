@@ -48,7 +48,15 @@ CronEventClass::CronEventClass()
 void CronEventClass::updateNextTrigger(bool forced)
 {
   if (isEnabled) {
-    time_t timenow = StructToUnix(getTime());
+    time_t timenow;
+    if (getTimeFuncPtr)
+    {
+      timenow = getTimeFuncPtr();  
+    }
+    else
+    {
+      timenow = time(nullptr); 
+    }
     if (onTickHandler != NULL && ((nextTrigger <= timenow) || forced)) {
       // update alarm if next trigger is not yet in the future
       nextTrigger = cron_next(&expr, timenow);
@@ -65,6 +73,11 @@ CronClass::CronClass()
   for(uint8_t id = 0; id < dtNBR_ALARMS; id++) {
     free(id);   // ensure all Alarms are cleared and available for allocation
   }
+}
+
+CronClass::attachgetTimeCallback(time_t (*getTimeFunc) (void))
+{
+  getTimeFuncPtr = getTimeFunc;
 }
 
 void CronClass::globalUpdateNextTrigger()
