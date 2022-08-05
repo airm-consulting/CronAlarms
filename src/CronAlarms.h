@@ -30,6 +30,7 @@ typedef CronID_t CronId;  // Arduino friendly name
 
 typedef void (*OnTick_t)();  // alarm callback function typedef
 typedef time_t (*getTime_t) ();
+time_t defaultgetTimeFunc() {return time(nullptr);}
 
 // class defining an alarm instance, only used by dtAlarmsClass
 class CronEventClass
@@ -38,7 +39,7 @@ public:
   CronEventClass();
   void updateNextTrigger(bool forced=false);
   cron_expr expr;
-  getTime_t getTimeCallback;
+  getTime_t getTimeCallback = defaultgetTimeFunc;
   OnTick_t onTickHandler;
   time_t nextTrigger;
   bool isEnabled;  // the timer is only actioned if isEnabled is true
@@ -54,6 +55,7 @@ private:
   uint8_t servicedCronId; // the alarm currently being serviced
   bool globalEnabled = true;
   void serviceAlarms();
+  getTime_t getTimeCallback = defaultgetTimeFunc; 
 
 public:
   CronClass();

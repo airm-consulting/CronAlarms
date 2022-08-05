@@ -48,15 +48,7 @@ CronEventClass::CronEventClass()
 void CronEventClass::updateNextTrigger(bool forced)
 {
   if (isEnabled) {
-    time_t timenow;
-    if (getTimeCallback)
-    {
-      timenow = getTimeCallback();  
-    }
-    else
-    {
-      timenow = time(nullptr); 
-    }
+    time_t timenow = getTimeCallback();  
     if (onTickHandler != NULL && ((nextTrigger <= timenow) || forced)) {
       // update alarm if next trigger is not yet in the future
       nextTrigger = cron_next(&expr, timenow);
@@ -81,6 +73,7 @@ void CronClass::attachgetTimeCallback(getTime_t getTimeFunc)
   {
     Alarm[i].getTimeCallback = getTimeFunc;
   }
+  getTimeCallback = getTimeFunc;
 }
 
 void CronClass::globalUpdateNextTrigger()
@@ -180,7 +173,7 @@ void CronClass::serviceAlarms()
   if (globalEnabled && !isServicing) {
     isServicing = true;
     for (servicedCronId = 0; servicedCronId < dtNBR_ALARMS; servicedCronId++) {
-      if (Alarm[servicedCronId].isEnabled && (StructToUnix(getTime()) >= Alarm[servicedCronId].nextTrigger)) {
+      if (Alarm[servicedCronId].isEnabled && (getTimeCallback) >= Alarm[servicedCronId].nextTrigger)) {
         OnTick_t TickHandler = Alarm[servicedCronId].onTickHandler;
         if (Alarm[servicedCronId].isOneShot) {
           free(servicedCronId);  // free the ID if mode is OnShot
