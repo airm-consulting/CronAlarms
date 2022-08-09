@@ -29,6 +29,10 @@ extern "C" {
 #include "ccronexpr/ccronexpr.h"
 }
 
+time_t defaultgetTimeFunc()
+{
+  return time(nullptr);
+}
 
 //**************************************************************
 //* Cron Event Class Constructor
@@ -48,7 +52,7 @@ CronEventClass::CronEventClass()
 void CronEventClass::updateNextTrigger(bool forced)
 {
   if (isEnabled) {
-    time_t timenow = StructToUnix(getTime());
+    time_t timenow = getTimeCallback();  
     if (onTickHandler != NULL && ((nextTrigger <= timenow) || forced)) {
       // update alarm if next trigger is not yet in the future
       nextTrigger = cron_next(&expr, timenow);
@@ -65,6 +69,15 @@ CronClass::CronClass()
   for(uint8_t id = 0; id < dtNBR_ALARMS; id++) {
     free(id);   // ensure all Alarms are cleared and available for allocation
   }
+}
+
+void CronClass::attachgetTimeCallback(getTime_t getTimeFunc)
+{
+  for (int i=0; i<dtNBR_ALARMS; i++)
+  {
+    Alarm[i].getTimeCallback = getTimeFunc;
+  }
+  getTimeCallback = getTimeFunc;
 }
 
 void CronClass::globalUpdateNextTrigger()
@@ -164,7 +177,7 @@ void CronClass::serviceAlarms()
   if (globalEnabled && !isServicing) {
     isServicing = true;
     for (servicedCronId = 0; servicedCronId < dtNBR_ALARMS; servicedCronId++) {
-      if (Alarm[servicedCronId].isEnabled && (StructToUnix(getTime()) >= Alarm[servicedCronId].nextTrigger)) {
+      if (Alarm[servicedCronId].isEnabled && (getTimeCallback() >= Alarm[servicedCronId].nextTrigger)) {
         OnTick_t TickHandler = Alarm[servicedCronId].onTickHandler;
         if (Alarm[servicedCronId].isOneShot) {
           free(servicedCronId);  // free the ID if mode is OnShot
