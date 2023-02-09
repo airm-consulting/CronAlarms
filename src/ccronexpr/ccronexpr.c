@@ -467,13 +467,11 @@ static int do_next(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     int resets[CRON_CF_ARR_LEN];
 #else
     resets = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
-    int * resets = _resets;
     if (!resets) goto return_result;
 #endif
 #if defined(NO_MALLOC)
     int empty_list[CRON_CF_ARR_LEN];
 #else
-    int * empty_list = _empty_list;
     empty_list = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
     if (!empty_list) goto return_result;
 #endif
@@ -1203,7 +1201,7 @@ static void set_months(char* value, uint8_t* targ, const char** error) {
 static void set_days_of_week(char* field, size_t len, uint8_t* targ, const char** error) {
     unsigned int max = 7;
 
-    if (1 == strlen(field) && '?' == field[0]) {
+    if ('?' == field[0]) {
         field[0] = '*';
     }
     if (validate_format(field, len, DAYS_ARR, CRON_DAYS_ARR_LEN)){
@@ -1241,13 +1239,22 @@ static void set_days_of_week(char* field, uint8_t* targ, const char** error) {
 }
 #endif
 
+#if defined(NO_MALLOC)
 static void set_days_of_month(char* field, size_t len, uint8_t* targ, const char** error) {
     /* Days of month start with 1 (in Cron and Calendar) so add one */
-    if (1 == strlen(field) && '?' == field[0]) {
+    if ('?' == field[0]) {
         field[0] = '*';
     }
     set_number_hits(field, len, targ, 1, CRON_MAX_DAYS_OF_MONTH, error);
 }
+#else
+static void set_days_of_month(char* field, uint8_t* targ, const char** error) {
+	if (1 == strlen(field) && '?' == field[0]) {
+		field[0] = '*';
+	}
+	set_number_hits(field, targ, 1, CRON_MAX_DAYS_OF_MONTH, error);
+}
+#endif
 
 #if defined(NO_MALLOC)
 void cron_parse_expr(const char* expression, cron_expr* target, const char** error) {
@@ -1534,13 +1541,11 @@ static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     int resets[CRON_CF_ARR_LEN];
 #else
     resets = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
-    int * resets = _resets;
     if (!resets) goto return_result;
 #endif
 #if defined(NO_MALLOC)
     int empty_list[CRON_CF_ARR_LEN];
 #else
-    int * empty_list = _empty_list;
     empty_list = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
     if (!empty_list) goto return_result;
 #endif
