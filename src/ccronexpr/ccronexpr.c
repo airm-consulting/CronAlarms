@@ -68,7 +68,8 @@ static const char* const MONTHS_ARR[] = { "FOO", "JAN", "FEB", "MAR", "APR", "MA
                                 (abs(num) < 10000000 ? 7 : \
                                 (abs(num) < 100000000 ? 8 : \
                                 (abs(num) < 1000000000 ? 9 : 10)))))))))
-
+#define NO_MALLOC 1
+#if !defined(NO_MALLOC)
 #ifndef CRON_TEST_MALLOC
 #define cron_malloc(x) malloc(x);
 #define cron_free(x) free(x);
@@ -76,7 +77,7 @@ static const char* const MONTHS_ARR[] = { "FOO", "JAN", "FEB", "MAR", "APR", "MA
 void* cron_malloc(size_t n);
 void cron_free(void* p);
 #endif /* CRON_TEST_MALLOC */
-
+#endif /* NO_MALLOC */
 /**
  * Time functions from standard library.
  * This part defines: cron_mktime: create time_t from tm
@@ -98,10 +99,10 @@ time_t _mkgmtime(struct tm* tm);
 /* function definitions */
 time_t cron_mktime_gm(struct tm* tm) {
 #if defined(_WIN32)
-/* http://stackoverflow.com/a/22557778 */
+    /* http://stackoverflow.com/a/22557778 */
     return _mkgmtime(tm);
 #elif defined(__AVR__)
-/* https://www.nongnu.org/avr-libc/user-manual/group__avr__time.html */
+    /* https://www.nongnu.org/avr-libc/user-manual/group__avr__time.html */
     return mk_gmtime(tm);
 #elif defined(ESP8266)
     /* https://linux.die.net/man/3/timegm */
@@ -218,6 +219,7 @@ uint8_t cron_get_bit(uint8_t* rbyte, int idx) {
     }
 }
 
+#if !defined(NO_MALLOC)
 static void free_splitted(char** splitted, size_t len) {
     size_t i;
     if (!splitted) return;
@@ -226,9 +228,10 @@ static void free_splitted(char** splitted, size_t len) {
             cron_free(splitted[i]);
         }
     }
-    cron_free(splitted);
 }
+#endif
 
+#if !defined(NO_MALLOC)
 static char* strdupl(const char* str, size_t len) {
     if (!str) return NULL;
     char* res = (char*) cron_malloc(len + 1);
@@ -237,6 +240,7 @@ static char* strdupl(const char* str, size_t len) {
     memcpy(res, str, len);
     return res;
 }
+#endif
 
 static unsigned int next_set_bit(uint8_t* bits, unsigned int max, unsigned int from_index, int* notfound) {
     unsigned int i;
@@ -272,27 +276,27 @@ static int add_to_field(struct tm* calendar, int field, int val) {
         return 1;
     }
     switch (field) {
-    case CRON_CF_SECOND:
-        calendar->tm_sec = calendar->tm_sec + val;
-        break;
-    case CRON_CF_MINUTE:
-        calendar->tm_min = calendar->tm_min + val;
-        break;
-    case CRON_CF_HOUR_OF_DAY:
-        calendar->tm_hour = calendar->tm_hour + val;
-        break;
-    case CRON_CF_DAY_OF_WEEK: /* mkgmtime ignores this field */
-    case CRON_CF_DAY_OF_MONTH:
-        calendar->tm_mday = calendar->tm_mday + val;
-        break;
-    case CRON_CF_MONTH:
-        calendar->tm_mon = calendar->tm_mon + val;
-        break;
-    case CRON_CF_YEAR:
-        calendar->tm_year = calendar->tm_year + val;
-        break;
-    default:
-        return 1; /* unknown field */
+        case CRON_CF_SECOND:
+            calendar->tm_sec = calendar->tm_sec + val;
+            break;
+        case CRON_CF_MINUTE:
+            calendar->tm_min = calendar->tm_min + val;
+            break;
+        case CRON_CF_HOUR_OF_DAY:
+            calendar->tm_hour = calendar->tm_hour + val;
+            break;
+        case CRON_CF_DAY_OF_WEEK: /* mkgmtime ignores this field */
+        case CRON_CF_DAY_OF_MONTH:
+            calendar->tm_mday = calendar->tm_mday + val;
+            break;
+        case CRON_CF_MONTH:
+            calendar->tm_mon = calendar->tm_mon + val;
+            break;
+        case CRON_CF_YEAR:
+            calendar->tm_year = calendar->tm_year + val;
+            break;
+        default:
+            return 1; /* unknown field */
     }
     time_t res = cron_mktime(calendar);
     if (CRON_INVALID_INSTANT == res) {
@@ -309,29 +313,29 @@ static int reset_min(struct tm* calendar, int field) {
         return 1;
     }
     switch (field) {
-    case CRON_CF_SECOND:
-        calendar->tm_sec = 0;
-        break;
-    case CRON_CF_MINUTE:
-        calendar->tm_min = 0;
-        break;
-    case CRON_CF_HOUR_OF_DAY:
-        calendar->tm_hour = 0;
-        break;
-    case CRON_CF_DAY_OF_WEEK:
-        calendar->tm_wday = 0;
-        break;
-    case CRON_CF_DAY_OF_MONTH:
-        calendar->tm_mday = 1;
-        break;
-    case CRON_CF_MONTH:
-        calendar->tm_mon = 0;
-        break;
-    case CRON_CF_YEAR:
-        calendar->tm_year = 0;
-        break;
-    default:
-        return 1; /* unknown field */
+        case CRON_CF_SECOND:
+            calendar->tm_sec = 0;
+            break;
+        case CRON_CF_MINUTE:
+            calendar->tm_min = 0;
+            break;
+        case CRON_CF_HOUR_OF_DAY:
+            calendar->tm_hour = 0;
+            break;
+        case CRON_CF_DAY_OF_WEEK:
+            calendar->tm_wday = 0;
+            break;
+        case CRON_CF_DAY_OF_MONTH:
+            calendar->tm_mday = 1;
+            break;
+        case CRON_CF_MONTH:
+            calendar->tm_mon = 0;
+            break;
+        case CRON_CF_YEAR:
+            calendar->tm_year = 0;
+            break;
+        default:
+            return 1; /* unknown field */
     }
     time_t res = cron_mktime(calendar);
     if (CRON_INVALID_INSTANT == res) {
@@ -360,29 +364,29 @@ static int set_field(struct tm* calendar, int field, int val) {
         return 1;
     }
     switch (field) {
-    case CRON_CF_SECOND:
-        calendar->tm_sec = val;
-        break;
-    case CRON_CF_MINUTE:
-        calendar->tm_min = val;
-        break;
-    case CRON_CF_HOUR_OF_DAY:
-        calendar->tm_hour = val;
-        break;
-    case CRON_CF_DAY_OF_WEEK:
-        calendar->tm_wday = val;
-        break;
-    case CRON_CF_DAY_OF_MONTH:
-        calendar->tm_mday = val;
-        break;
-    case CRON_CF_MONTH:
-        calendar->tm_mon = val;
-        break;
-    case CRON_CF_YEAR:
-        calendar->tm_year = val;
-        break;
-    default:
-        return 1; /* unknown field */
+        case CRON_CF_SECOND:
+            calendar->tm_sec = val;
+            break;
+        case CRON_CF_MINUTE:
+            calendar->tm_min = val;
+            break;
+        case CRON_CF_HOUR_OF_DAY:
+            calendar->tm_hour = val;
+            break;
+        case CRON_CF_DAY_OF_WEEK:
+            calendar->tm_wday = val;
+            break;
+        case CRON_CF_DAY_OF_MONTH:
+            calendar->tm_mday = val;
+            break;
+        case CRON_CF_MONTH:
+            calendar->tm_mon = val;
+            break;
+        case CRON_CF_YEAR:
+            calendar->tm_year = val;
+            break;
+        default:
+            return 1; /* unknown field */
     }
     time_t res = cron_mktime(calendar);
     if (CRON_INVALID_INSTANT == res) {
@@ -443,8 +447,10 @@ static unsigned int find_next_day(struct tm* calendar, uint8_t* days_of_month, u
 static int do_next(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     int i;
     int res = 0;
+#if !defined(NO_MALLOC)
     int* resets = NULL;
     int* empty_list = NULL;
+#endif
     unsigned int second = 0;
     unsigned int update_second = 0;
     unsigned int minute = 0;
@@ -457,10 +463,20 @@ static int do_next(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     unsigned int month = 0;
     unsigned int update_month = 0;
 
+#if defined(NO_MALLOC)
+    int resets[CRON_CF_ARR_LEN];
+#else
     resets = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
+    int * resets = _resets;
     if (!resets) goto return_result;
+#endif
+#if defined(NO_MALLOC)
+    int empty_list[CRON_CF_ARR_LEN];
+#else
+    int * empty_list = _empty_list;
     empty_list = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
     if (!empty_list) goto return_result;
+#endif
     for (i = 0; i < CRON_CF_ARR_LEN; i++) {
         resets[i] = -1;
         empty_list[i] = -1;
@@ -518,6 +534,7 @@ static int do_next(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     goto return_result;
 
     return_result:
+#if !defined(NO_MALLOC)
     if (!resets || !empty_list) {
         res = -1;
     }
@@ -527,9 +544,11 @@ static int do_next(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     if (empty_list) {
         cron_free(empty_list);
     }
+#endif
     return res;
 }
 
+#if !defined(NO_MALLOC)
 static int to_upper(char* str) {
     if (!str) return 1;
     int i;
@@ -539,7 +558,19 @@ static int to_upper(char* str) {
     }
     return 0;
 }
+#endif
 
+#if defined(NO_MALLOC)
+int to_string(char * str, int num) {
+    if (!str) return -1;
+    if (abs(num) >= CRON_MAX_NUM_TO_SRING) return -1;// NULL;
+    int res = sprintf(str, "%d", num);
+    if (res < 0) {
+        return res;
+    }
+    return res;
+}
+#else
 static char* to_string(int num) {
     if (abs(num) >= CRON_MAX_NUM_TO_SRING) return NULL;
     char* str = (char*) cron_malloc(CRON_NUM_OF_DIGITS(num) + 1);
@@ -551,8 +582,11 @@ static char* to_string(int num) {
     }
     return str;
 }
+#endif
 
-static char* str_replace(char *orig, const char *rep, const char *with) {
+
+#if !defined(NO_MALLOC)
+static char * str_replace(char *orig, const char *rep, const char *with) {
     char *result; /* the return string */
     char *ins; /* the next insert point */
     char *tmp; /* varies */
@@ -590,7 +624,21 @@ static char* str_replace(char *orig, const char *rep, const char *with) {
     strcpy(tmp, orig);
     return result;
 }
+#endif
 
+#if defined(NO_MALLOC)
+unsigned int parse_uint(const char* str, int* errcode) {
+    errno = 0;
+    int l = atoi(str);
+    if (l<0 || l>INT_MAX){
+        *errcode = 1;
+        return 0;
+    } else {
+        *errcode = 0;
+        return (unsigned int) l;
+    }
+}
+#else
 static unsigned int parse_uint(const char* str, int* errcode) {
     char* endptr;
     errno = 0;
@@ -603,7 +651,60 @@ static unsigned int parse_uint(const char* str, int* errcode) {
         return (unsigned int) l;
     }
 }
+#endif
 
+#if defined(NO_MALLOC)
+int split_str(const char* str, size_t stlen, char del, size_t* len_out, int * res_idx) {
+    size_t i;
+    size_t len = 1; //head is always the first splitted index
+    res_idx[0] = 0;
+    int accum = 0;
+    size_t bi = 0;
+    size_t ri = 1;
+    int hit = 0;
+
+    if (!str) goto return_error;
+    if (stlen >= CRON_MAX_STR_LEN_TO_SPLIT) goto return_error;
+
+    //determing length of the list of delimiter index
+    for (i = 0; i < stlen; i++) {
+        int c = str[i];
+        if (del == str[i]) {
+            if (accum > 0) {
+                len += 1;
+                accum = 0;
+            }
+        } else if (!isspace(c)) {
+            accum += 1;
+        }
+    }
+    if(accum==0)
+    {
+        len -= 1;
+    }
+    for (i = 0; i < stlen; i++) {
+        int c = str[i];
+        if (del == str[i]) {
+            hit = 1;
+            if (bi > 0) {
+                bi = 0;
+            }
+        } else if (!isspace(c)) {
+            if (bi == 0 && hit == 1)
+            {
+                hit = 0;
+                res_idx[ri++] = i;
+            }
+            bi++;
+        }
+    }
+    *len_out = len;
+    return 0;
+    return_error:
+    *len_out = 0;
+    return 1;
+}
+#else
 static char** split_str(const char* str, char del, size_t* len_out) {
     size_t i;
     size_t stlen = 0;
@@ -620,7 +721,7 @@ static char** split_str(const char* str, char del, size_t* len_out) {
         stlen += 1;
         if (stlen >= CRON_MAX_STR_LEN_TO_SPLIT) goto return_error;
     }
-    
+
     for (i = 0; i < stlen; i++) {
         int c = str[i];
         if (del == str[i]) {
@@ -677,7 +778,9 @@ static char** split_str(const char* str, char del, size_t* len_out) {
     *len_out = 0;
     return NULL;
 }
+#endif
 
+#if !defined(NO_MALLOC)
 static char* replace_ordinals(char* value, const char* const * arr, size_t arr_len) {
     size_t i;
     char* cur = value;
@@ -706,7 +809,67 @@ static char* replace_ordinals(char* value, const char* const * arr, size_t arr_l
     }
     return res;
 }
+#endif
 
+#if defined(NO_MALLOC)
+/*
+ * Find the first occurrence of find in s, where the search is limited to the
+ * first slen characters of s.
+ */
+char * strnstr(const char *s, const char *find, size_t slen)
+{
+    char c, sc;
+    size_t len;
+
+    if ((c = *find++) != '\0') {
+        len = strlen(find);
+        do {
+            do {
+                if (slen-- < 1 || (sc = *s++) == '\0')
+                    return (NULL);
+            } while (sc != c);
+            if (len > slen)
+                return (NULL);
+        } while (strncmp(s, find, len) != 0);
+        s--;
+    }
+    return ((char *)s);
+}
+
+//not supporting any cron string with ascii text on it
+int validate_format(const char * str, size_t len, const char * const * arr, size_t arr_len)
+{
+    size_t i;
+    char strnum[CRON_NUM_OF_DIGITS((int) arr_len)+1];
+    for (i=0; i<arr_len;i++)
+    {
+        int result = to_string(strnum, (int) i);
+        if (result < 0)
+        {
+            return 1;
+        }
+        if (strnstr(str, arr[i], len))
+        {
+            return 2;
+        }
+    }
+    return 0;
+}
+#endif
+
+#if defined(NO_MALLOC)
+int has_char(const char* str, size_t stlen, char ch) {
+    size_t i;
+    size_t len = 0;
+    if (!str) return 0;
+//    len = strlen(str);
+    len = stlen;
+    for (i = 0; i < len; i++) {
+        if (str[i] == ch) return 1;
+    }
+    return 0;
+}
+#else
 static int has_char(char* str, char ch) {
     size_t i;
     size_t len = 0;
@@ -717,7 +880,69 @@ static int has_char(char* str, char ch) {
     }
     return 0;
 }
+#endif
 
+#if defined(NO_MALLOC)
+unsigned int get_range(unsigned int * res, const char* field, size_t stlen, unsigned int min, unsigned int max, const char** error) {
+
+    size_t len = 0;
+    if (!res) goto return_error;
+
+    res[0] = 0;
+    res[1] = 0;
+    if ('*' == field[0]){
+        res[0] = min;
+        res[1] = max - 1;
+    } else if (!has_char(field, stlen, '-')) {
+        int err = 0;
+        unsigned int val = parse_uint(field, &err);
+        if (err) {
+            *error = "Unsigned integer parse error 1";
+            goto return_error;
+        }
+
+        res[0] = val;
+        res[1] = val;
+    } else {
+        int expected_splits = 2;
+        int splitted_idx[expected_splits];
+        int result = split_str(field, stlen, '-', &len, splitted_idx);
+        if (expected_splits != len || result != 0) {
+            *error = "Specified range requires two fields";
+            goto return_error;
+        }
+        int err = 0;
+        res[0] = parse_uint(&field[splitted_idx[0]], &err);
+        if (err) {
+            *error = "Unsigned integer parse error 2";
+            goto return_error;
+        }
+        res[1] = parse_uint(&field[splitted_idx[1]], &err);
+        if (err) {
+            *error = "Unsigned integer parse error 3";
+            goto return_error;
+        }
+    }
+    if (res[0] >= max || res[1] >= max) {
+        *error = "Specified range exceeds maximum";
+        goto return_error;
+    }
+    if (res[0] < min || res[1] < min) {
+        *error = "Specified range is less than minimum";
+        goto return_error;
+    }
+    if (res[0] > res[1]) {
+        *error = "Specified range start exceeds range end";
+        goto return_error;
+    }
+
+    *error = NULL;
+    return 0;
+
+    return_error:
+    return 1;
+}
+#else
 static unsigned int* get_range(char* field, unsigned int min, unsigned int max, const char** error) {
 
     char** parts = NULL;
@@ -783,7 +1008,72 @@ static unsigned int* get_range(char* field, unsigned int min, unsigned int max, 
 
     return NULL;
 }
+#endif
 
+#if defined(NO_MALLOC)
+void set_number_hits(const char* value, size_t stlen, uint8_t* target, unsigned int min, unsigned int max, const char** error) {
+    size_t i;
+    unsigned int i1;
+    size_t len = 0;
+
+    int comma_idx[2];
+    int _result = split_str(value, stlen, ',',  &len, comma_idx);
+    if (_result != 0){
+        *error = "Comma split error";
+        goto return_result;
+    }
+
+    for (i = 0; i < len; i++) {
+        int idx = comma_idx[i];
+        int strlen = ((i+1)==len)? stlen - comma_idx[i]: comma_idx[i+1]-comma_idx[i];
+        if (!has_char(&value[idx], strlen, '/')) {
+            /* Not an incrementer so it must be a range (possibly empty) */
+            unsigned int range[2];
+            get_range(range, &value[idx], strlen, min, max, error);
+
+            if (*error) {
+                goto return_result;
+            }
+            for (i1 = range[0]; i1 <= range[1]; i1++) {
+                cron_set_bit(target, i1);
+            }
+        } else {
+            size_t len2 = 0;
+            int delim_idx[2];
+            int tmp = split_str(&value[idx], strlen, '/', &len2, delim_idx);
+            if (tmp != 0 && len2 != 2){
+                *error = "Incrementer must have two fields";
+                goto return_result;
+            }
+            unsigned int range[2];
+            get_range(range, &value[idx+delim_idx[0]], delim_idx[1]-delim_idx[0], min, max, error);
+            if (*error) {
+                goto return_result;
+            }
+            if (!has_char(&value[idx], delim_idx[1]-delim_idx[0],'-')) {
+                range[1] = max - 1;
+            }
+            int err = 0;
+            unsigned int delta = parse_uint(&value[idx+delim_idx[1]], &err);
+            if (err) {
+                *error = "Unsigned integer parse error 4";
+                goto return_result;
+            }
+            if (0 == delta) {
+                *error = "Incrementer may not be zero";
+                goto return_result;
+            }
+            for (i1 = range[0]; i1 <= range[1]; i1 += delta) {
+                cron_set_bit(target, i1);
+            }
+        }
+    }
+    goto return_result;
+
+    return_result:
+    return;
+}
+#else
 static void set_number_hits(const char* value, uint8_t* target, unsigned int min, unsigned int max, const char** error) {
     size_t i;
     unsigned int i1;
@@ -862,7 +1152,28 @@ static void set_number_hits(const char* value, uint8_t* target, unsigned int min
     free_splitted(fields, len);
 
 }
+#endif
 
+#if defined(NO_MALLOC)
+void set_months(const char* value, size_t len, uint8_t* targ, const char** error) {
+    unsigned int i;
+    unsigned int max = 12;
+
+    if (validate_format(value, len, MONTHS_ARR, CRON_MONTHS_ARR_LEN)){
+        *error = "Invalid month format";
+        return;
+    }
+    set_number_hits(value, len, targ, 1, max+1, error);
+
+    /* ... and then rotate it to the front of the months */
+    for (i = 1; i <= max; i++) {
+        if (cron_get_bit(targ, i)) {
+            cron_set_bit(targ, i - 1);
+            cron_del_bit(targ, i);
+        }
+    }
+}
+#else
 static void set_months(char* value, uint8_t* targ, const char** error) {
     unsigned int i;
     unsigned int max = 12;
@@ -886,7 +1197,27 @@ static void set_months(char* value, uint8_t* targ, const char** error) {
         }
     }
 }
+#endif
 
+#if defined(NO_MALLOC)
+static void set_days_of_week(char* field, size_t len, uint8_t* targ, const char** error) {
+    unsigned int max = 7;
+
+    if (1 == strlen(field) && '?' == field[0]) {
+        field[0] = '*';
+    }
+    if (validate_format(field, len, DAYS_ARR, CRON_DAYS_ARR_LEN)){
+        *error = "Invalid day format";
+        return;
+    }
+    set_number_hits(field, len, targ, 0, max+1, error);
+    if (cron_get_bit(targ, 7)) {
+        /* Sunday can be represented as 0 or 7*/
+        cron_set_bit(targ, 0);
+        cron_del_bit(targ, 7);
+    }
+}
+#else
 static void set_days_of_week(char* field, uint8_t* targ, const char** error) {
     unsigned int max = 7;
     char* replaced = NULL;
@@ -908,15 +1239,58 @@ static void set_days_of_week(char* field, uint8_t* targ, const char** error) {
         cron_del_bit(targ, 7);
     }
 }
+#endif
 
-static void set_days_of_month(char* field, uint8_t* targ, const char** error) {
+static void set_days_of_month(char* field, size_t len, uint8_t* targ, const char** error) {
     /* Days of month start with 1 (in Cron and Calendar) so add one */
     if (1 == strlen(field) && '?' == field[0]) {
         field[0] = '*';
     }
-    set_number_hits(field, targ, 1, CRON_MAX_DAYS_OF_MONTH, error);
+    set_number_hits(field, len, targ, 1, CRON_MAX_DAYS_OF_MONTH, error);
 }
 
+#if defined(NO_MALLOC)
+void cron_parse_expr(const char* expression, cron_expr* target, const char** error) {
+    const char* err_local;
+    size_t len = 0;
+    if (!error) {
+        error = &err_local;
+    }
+    if (!expression) {
+        *error = "Invalid NULL expression";
+        goto return_res;
+    }
+    if (!target) {
+        *error = "Invalid NULL target";
+        goto return_res;
+    }
+
+    int delim_idx[6];
+    int tmp = split_str(expression, strlen(expression), ' ', &len, delim_idx);
+    if (len != 6 || tmp != 0){
+        *error = "Invalid number of fields, expression must consist of 6 fields";
+        goto return_res;
+    }
+    memset(target, 0, sizeof(*target));
+    set_number_hits(&expression[delim_idx[0]], delim_idx[1]-delim_idx[0], target->seconds, 0, 60, error);
+    if (*error) goto return_res;
+    set_number_hits(&expression[delim_idx[1]], delim_idx[2]-(delim_idx[1]), target->minutes, 0, 60, error);
+    if (*error) goto return_res;
+    set_number_hits(&expression[delim_idx[2]], delim_idx[3]-(delim_idx[2]), target->hours, 0, 24, error);
+    if (*error) goto return_res;
+    set_days_of_month(&expression[delim_idx[3]], delim_idx[4]-(delim_idx[3]), target->days_of_month, error);
+    if (*error) goto return_res;
+    set_months(&expression[delim_idx[4]], delim_idx[5]-(delim_idx[4]), target->months, error);
+    if (*error) goto return_res;
+    set_days_of_week(&expression[delim_idx[5]], strlen(expression)-(delim_idx[5]), target->days_of_week, error);
+    if (*error) goto return_res;
+
+    goto return_res;
+
+    return_res:
+    return;
+}
+#else
 void cron_parse_expr(const char* expression, cron_expr* target, const char** error) {
     const char* err_local;
     size_t len = 0;
@@ -955,9 +1329,10 @@ void cron_parse_expr(const char* expression, cron_expr* target, const char** err
 
     goto return_res;
 
-    return_res: 
+    return_res:
     free_splitted(fields, len);
 }
+#endif
 
 time_t cron_next(cron_expr* expr, time_t date) {
     /*
@@ -1040,30 +1415,30 @@ static int reset_max(struct tm* calendar, int field) {
         return 1;
     }
     switch (field) {
-    case CRON_CF_SECOND:
-        calendar->tm_sec = 59;
-        break;
-    case CRON_CF_MINUTE:
-        calendar->tm_min = 59;
-        break;
-    case CRON_CF_HOUR_OF_DAY:
-        calendar->tm_hour = 23;
-        break;
-    case CRON_CF_DAY_OF_WEEK:
-        calendar->tm_wday = 6;
-        break;
-    case CRON_CF_DAY_OF_MONTH:
-        calendar->tm_mday = last_day_of_month(calendar->tm_mon, calendar->tm_year);
-        break;
-    case CRON_CF_MONTH:
-        calendar->tm_mon = 11;
-        break;
-    case CRON_CF_YEAR:
-        /* I don't think this is supposed to happen ... */
-        fprintf(stderr, "reset CRON_CF_YEAR\n");
-        break;
-    default:
-        return 1; /* unknown field */
+        case CRON_CF_SECOND:
+            calendar->tm_sec = 59;
+            break;
+        case CRON_CF_MINUTE:
+            calendar->tm_min = 59;
+            break;
+        case CRON_CF_HOUR_OF_DAY:
+            calendar->tm_hour = 23;
+            break;
+        case CRON_CF_DAY_OF_WEEK:
+            calendar->tm_wday = 6;
+            break;
+        case CRON_CF_DAY_OF_MONTH:
+            calendar->tm_mday = last_day_of_month(calendar->tm_mon, calendar->tm_year);
+            break;
+        case CRON_CF_MONTH:
+            calendar->tm_mon = 11;
+            break;
+        case CRON_CF_YEAR:
+            /* I don't think this is supposed to happen ... */
+            fprintf(stderr, "reset CRON_CF_YEAR\n");
+            break;
+        default:
+            return 1; /* unknown field */
     }
     time_t res = cron_mktime(calendar);
     if (CRON_INVALID_INSTANT == res) {
@@ -1139,8 +1514,10 @@ static unsigned int find_prev_day(struct tm* calendar, uint8_t* days_of_month, u
 static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     int i;
     int res = 0;
+#if !defined(NO_MALLOC)
     int* resets = NULL;
     int* empty_list = NULL;
+#endif
     unsigned int second = 0;
     unsigned int update_second = 0;
     unsigned int minute = 0;
@@ -1153,10 +1530,20 @@ static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     unsigned int month = 0;
     unsigned int update_month = 0;
 
+#if defined(NO_MALLOC)
+    int resets[CRON_CF_ARR_LEN];
+#else
     resets = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
+    int * resets = _resets;
     if (!resets) goto return_result;
+#endif
+#if defined(NO_MALLOC)
+    int empty_list[CRON_CF_ARR_LEN];
+#else
+    int * empty_list = _empty_list;
     empty_list = (int*) cron_malloc(CRON_CF_ARR_LEN * sizeof(int));
     if (!empty_list) goto return_result;
+#endif
     for (i = 0; i < CRON_CF_ARR_LEN; i++) {
         resets[i] = -1;
         empty_list[i] = -1;
@@ -1214,6 +1601,7 @@ static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     goto return_result;
 
     return_result:
+#if !defined(NO_MALLOC)
     if (!resets || !empty_list) {
         res = -1;
     }
@@ -1223,6 +1611,7 @@ static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
     if (empty_list) {
         cron_free(empty_list);
     }
+#endif
     return res;
 }
 

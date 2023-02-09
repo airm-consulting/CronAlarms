@@ -85,7 +85,7 @@ time_t cron_next(cron_expr* expr, time_t date);
  * @param date start date to start calculation from
  * @return previous 'fire' date in case of success, '((time_t) -1)' in case of error.
  */
-time_t cron_prev(cron_expr* expr, time_t date);
+//time_t cron_prev(cron_expr* expr, time_t date);
 
 
 #if defined(__cplusplus) && !defined(CRON_COMPILE_AS_CXX)
