@@ -51,9 +51,38 @@
 
 #define CRON_INVALID_INSTANT ((time_t) -1)
 
+#if defined(__AVR__)
+#include <avr/pgmspace.h>
+const char str_sun[] PROGMEM = "SUN";
+const char str_mon[] PROGMEM = "MON";
+const char str_tue[] PROGMEM = "TUE";
+const char str_wed[] PROGMEM = "WED";
+const char str_thu[] PROGMEM = "THU";
+const char str_fri[] PROGMEM = "FRI";
+const char str_sat[] PROGMEM = "SAT";
+const char* const DAYS_ARR[] PROGMEM = { str_sun, str_mon, str_tue, str_wed, str_thu, str_fri, str_sat };
+#else
 static const char* const DAYS_ARR[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
+#endif
 #define CRON_DAYS_ARR_LEN 7
+#if defined(__AVR__)
+const char str_foo[] PROGMEM = "FOO";
+const char str_jan[] PROGMEM = "JAN";
+const char str_feb[] PROGMEM = "FEB";
+const char str_mar[] PROGMEM = "MAR";
+const char str_apr[] PROGMEM = "APR";
+const char str_may[] PROGMEM = "MAY";
+const char str_jun[] PROGMEM = "JUN";
+const char str_jul[] PROGMEM = "JUL";
+const char str_aug[] PROGMEM = "AUG";
+const char str_sep[] PROGMEM = "SEP";
+const char str_oct[] PROGMEM = "OCT";
+const char str_nov[] PROGMEM = "NOV";
+const char str_dec[] PROGMEM = "DEC";
+const char* const MONTHS_ARR[] PROGMEM = { str_foo, str_jan, str_feb, str_mar, str_apr, str_may, str_jun, str_jul, str_aug, str_sep, str_oct, str_nov, str_dec };
+#else
 static const char* const MONTHS_ARR[] = { "FOO", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" };
+#endif
 #define CRON_MONTHS_ARR_LEN 13
 
 #define CRON_MAX_STR_LEN_TO_SPLIT 256
@@ -834,19 +863,28 @@ char * strnstr(const char *s, const char *find, size_t slen)
     return ((char *)s);
 }
 
-//not supporting any cron string with ascii text on it
+//not supporting any cron string with ascii text on it, plan to implement strplace in the future
 int validate_format(const char * str, size_t len, const char * const * arr, size_t arr_len)
 {
+    size_t j;
+    for (j=0; j<len;j++)
+    {
+        if ((str[j] <= 'Z' && str[j] >= 'A') ||
+            (str[j] <= 'z' && str[j] >= 'a'))
+        {
+            return 3;
+        }
+    }
     size_t i;
-    char strnum[CRON_NUM_OF_DIGITS((int) arr_len)+1];
     for (i=0; i<arr_len;i++)
     {
-        int result = to_string(strnum, (int) i);
-        if (result < 0)
-        {
-            return 1;
-        }
+#if defined(__AVR__)
+        char temp[4];
+        strncpy_P(temp, (char*) pgm_read_word(&(arr[i])), 4);
+        if (strnstr(str, temp, len))
+#else
         if (strnstr(str, arr[i], len))
+#endif
         {
             return 2;
         }
@@ -895,7 +933,11 @@ unsigned int get_range(unsigned int * res, const char* field, size_t stlen, unsi
         int err = 0;
         unsigned int val = parse_uint(field, &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 1");
+#else
             *error = "Unsigned integer parse error 1";
+#endif
             goto return_error;
         }
 
@@ -906,31 +948,55 @@ unsigned int get_range(unsigned int * res, const char* field, size_t stlen, unsi
         int splitted_idx[expected_splits];
         int result = split_str(field, stlen, '-', &len, splitted_idx);
         if (expected_splits != len || result != 0) {
+#if defined(__AVR__)
+            *error = PSTR("Specified range requires two fields");
+#else
             *error = "Specified range requires two fields";
+#endif
             goto return_error;
         }
         int err = 0;
         res[0] = parse_uint(&field[splitted_idx[0]], &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 2");
+#else
             *error = "Unsigned integer parse error 2";
+#endif
             goto return_error;
         }
         res[1] = parse_uint(&field[splitted_idx[1]], &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 3");
+#else
             *error = "Unsigned integer parse error 3";
+#endif
             goto return_error;
         }
     }
     if (res[0] >= max || res[1] >= max) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range exceeds maximum");
+#else
         *error = "Specified range exceeds maximum";
+#endif
         goto return_error;
     }
     if (res[0] < min || res[1] < min) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range is less than minimum");
+#else
         *error = "Specified range is less than minimum";
+#endif
         goto return_error;
     }
     if (res[0] > res[1]) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range start exceeds range end");
+#else
         *error = "Specified range start exceeds range end";
+#endif
         goto return_error;
     }
 
@@ -957,7 +1023,11 @@ static unsigned int* get_range(char* field, unsigned int min, unsigned int max, 
         int err = 0;
         unsigned int val = parse_uint(field, &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 1");
+#else
             *error = "Unsigned integer parse error 1";
+#endif
             goto return_error;
         }
 
@@ -966,31 +1036,55 @@ static unsigned int* get_range(char* field, unsigned int min, unsigned int max, 
     } else {
         parts = split_str(field, '-', &len);
         if (2 != len) {
+#if defined(__AVR__)
+            *error = PSTR("Specified range requires two fields");
+#else
             *error = "Specified range requires two fields";
+#endif
             goto return_error;
         }
         int err = 0;
         res[0] = parse_uint(parts[0], &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 2");
+#else
             *error = "Unsigned integer parse error 2";
+#endif
             goto return_error;
         }
         res[1] = parse_uint(parts[1], &err);
         if (err) {
+#if defined(__AVR__)
+            *error = PSTR("Unsigned integer parse error 3");
+#else
             *error = "Unsigned integer parse error 3";
+#endif
             goto return_error;
         }
     }
     if (res[0] >= max || res[1] >= max) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range exceeds maximum");
+#else
         *error = "Specified range exceeds maximum";
+#endif
         goto return_error;
     }
     if (res[0] < min || res[1] < min) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range is less than minimum");
+#else
         *error = "Specified range is less than minimum";
+#endif
         goto return_error;
     }
     if (res[0] > res[1]) {
+#if defined(__AVR__)
+        *error = PSTR("Specified range start exceeds range end");
+#else
         *error = "Specified range start exceeds range end";
+#endif
         goto return_error;
     }
 
@@ -1017,7 +1111,11 @@ void set_number_hits(const char* value, size_t stlen, uint8_t* target, unsigned 
     int comma_idx[2];
     int _result = split_str(value, stlen, ',',  &len, comma_idx);
     if (_result != 0){
+#if defined(__AVR__)
+        *error = PSTR("Comma split error");
+#else
         *error = "Comma split error";
+#endif
         goto return_result;
     }
 
@@ -1040,7 +1138,11 @@ void set_number_hits(const char* value, size_t stlen, uint8_t* target, unsigned 
             int delim_idx[2];
             int tmp = split_str(&value[idx], strlen, '/', &len2, delim_idx);
             if (tmp != 0 && len2 != 2){
+#if defined(__AVR__)
+                *error = PSTR("Incrementer must have two fields");
+#else
                 *error = "Incrementer must have two fields";
+#endif
                 goto return_result;
             }
             unsigned int range[2];
@@ -1054,11 +1156,19 @@ void set_number_hits(const char* value, size_t stlen, uint8_t* target, unsigned 
             int err = 0;
             unsigned int delta = parse_uint(&value[idx+delim_idx[1]], &err);
             if (err) {
+#if defined(__AVR__)
+                *error = PSTR("Unsigned integer parse error 4");
+#else
                 *error = "Unsigned integer parse error 4";
+#endif
                 goto return_result;
             }
             if (0 == delta) {
+#if defined(__AVR__)
+                *error = PSTR("Incrementer may not be zero");
+#else
                 *error = "Incrementer may not be zero";
+#endif
                 goto return_result;
             }
             for (i1 = range[0]; i1 <= range[1]; i1 += delta) {
@@ -1079,7 +1189,11 @@ static void set_number_hits(const char* value, uint8_t* target, unsigned int min
 
     char** fields = split_str(value, ',', &len);
     if (!fields) {
+#if defined(__AVR__)
+        *error = PSTR("Comma split error");
+#else
         *error = "Comma split error";
+#endif
         goto return_result;
     }
 
@@ -1107,7 +1221,11 @@ static void set_number_hits(const char* value, uint8_t* target, unsigned int min
             size_t len2 = 0;
             char** split = split_str(fields[i], '/', &len2);
             if (2 != len2) {
+#if defined(__AVR__)
+                *error = PSTR("Incrementer must have two fields");
+#else
                 *error = "Incrementer must have two fields";
+#endif
                 free_splitted(split, len2);
                 goto return_result;
             }
@@ -1125,13 +1243,21 @@ static void set_number_hits(const char* value, uint8_t* target, unsigned int min
             int err = 0;
             unsigned int delta = parse_uint(split[1], &err);
             if (err) {
+#if defined(__AVR__)
+                *error = PSTR("Unsigned integer parse error 4");
+#else
                 *error = "Unsigned integer parse error 4";
+#endif
                 cron_free(range);
                 free_splitted(split, len2);
                 goto return_result;
             }
             if (0 == delta) {
+#if defined(__AVR__)
+                *error = PSTR("Incrementer may not be zero");
+#else
                 *error = "Incrementer may not be zero";
+#endif
                 cron_free(range);
                 free_splitted(split, len2);
                 goto return_result;
@@ -1158,7 +1284,11 @@ void set_months(const char* value, size_t len, uint8_t* targ, const char** error
     unsigned int max = 12;
 
     if (validate_format(value, len, MONTHS_ARR, CRON_MONTHS_ARR_LEN)){
+#if defined(__AVR__)
+        *error = PSTR("Invalid month format");
+#else
         *error = "Invalid month format";
+#endif
         return;
     }
     set_number_hits(value, len, targ, 1, max+1, error);
@@ -1181,7 +1311,11 @@ static void set_months(char* value, uint8_t* targ, const char** error) {
     to_upper(value);
     replaced = replace_ordinals(value, MONTHS_ARR, CRON_MONTHS_ARR_LEN);
     if (!replaced) {
+#if defined(__AVR__)
+        *error = PSTR("Invalid month format");
+#else
         *error = "Invalid month format";
+#endif
         return;
     }
     set_number_hits(replaced, targ, 1, max + 1, error);
@@ -1205,7 +1339,11 @@ static void set_days_of_week(char* field, size_t len, uint8_t* targ, const char*
         field[0] = '*';
     }
     if (validate_format(field, len, DAYS_ARR, CRON_DAYS_ARR_LEN)){
-        *error = "Invalid day format";
+#if defined(__AVR__)
+        *error = PSTR("Invalid day of week format");
+#else
+        *error = "Invalid day of week format";
+#endif
         return;
     }
     set_number_hits(field, len, targ, 0, max+1, error);
@@ -1226,7 +1364,11 @@ static void set_days_of_week(char* field, uint8_t* targ, const char** error) {
     to_upper(field);
     replaced = replace_ordinals(field, DAYS_ARR, CRON_DAYS_ARR_LEN);
     if (!replaced) {
-        *error = "Invalid day format";
+#if defined(__AVR__)
+        *error = PSTR("Invalid day of week format");
+#else
+        *error = "Invalid day of week format";
+#endif
         return;
     }
     set_number_hits(replaced, targ, 0, max + 1, error);
@@ -1257,25 +1399,38 @@ static void set_days_of_month(char* field, uint8_t* targ, const char** error) {
 #endif
 
 #if defined(NO_MALLOC)
-void cron_parse_expr(const char* expression, cron_expr* target, const char** error) {
+void cron_parse_expr(char* expression, cron_expr* target, const char** error) {
     const char* err_local;
     size_t len = 0;
     if (!error) {
         error = &err_local;
     }
+    *error = NULL;
     if (!expression) {
+#if defined(__AVR__)
+        (*error) = PSTR("Invalid NULL expression");
+#else
         *error = "Invalid NULL expression";
+#endif
         goto return_res;
     }
     if (!target) {
+#if defined(__AVR__)
+        *error = PSTR("Invalid NULL target");
+#else
         *error = "Invalid NULL target";
+#endif
         goto return_res;
     }
 
     int delim_idx[6];
     int tmp = split_str(expression, strlen(expression), ' ', &len, delim_idx);
     if (len != 6 || tmp != 0){
+#if defined(__AVR__)
+        *error = PSTR("Invalid number of fields, expression must consist of 6 fields");
+#else
         *error = "Invalid number of fields, expression must consist of 6 fields";
+#endif
         goto return_res;
     }
     memset(target, 0, sizeof(*target));
@@ -1307,17 +1462,29 @@ void cron_parse_expr(const char* expression, cron_expr* target, const char** err
     }
     *error = NULL;
     if (!expression) {
+#if defined(__AVR__)
+        *error = PSTR("Invalid NULL expression");
+#else
         *error = "Invalid NULL expression";
+#endif
         goto return_res;
     }
     if (!target) {
+#if defined(__AVR__)
+        *error = PSTR("Invalid NULL target");
+#else
         *error = "Invalid NULL target";
+#endif
         goto return_res;
     }
 
     fields = split_str(expression, ' ', &len);
     if (len != 6) {
+#if defined(__AVR__)
+        *error = PSTR("Invalid number of fields, expression must consist of 6 fields");
+#else
         *error = "Invalid number of fields, expression must consist of 6 fields";
+#endif
         goto return_res;
     }
     memset(target, 0, sizeof(*target));
@@ -1344,20 +1511,15 @@ void cron_parse_expr(const char* expression, cron_expr* target, const char** err
 time_t cron_next(cron_expr* expr, time_t date) {
     /*
      The plan:
-
      1 Round up to the next whole second
-
      2 If seconds match move on, otherwise find the next match:
      2.1 If next match is in the next minute then roll forwards
-
      3 If minute matches move on, otherwise find the next match
      3.1 If next match is in the next hour then roll forwards
      3.2 Reset the seconds and go to 2
-
      4 If hour matches move on, otherwise find the next match
      4.1 If next match is in the next day then roll forwards,
      4.2 Reset the minutes and seconds and go to 2
-
      ...
      */
     if (!expr) return CRON_INVALID_INSTANT;
@@ -1623,20 +1785,15 @@ static int do_prev(cron_expr* expr, struct tm* calendar, unsigned int dot) {
 time_t cron_prev(cron_expr* expr, time_t date) {
     /*
      The plan:
-
      1 Round down to a whole second
-
      2 If seconds match move on, otherwise find the next match:
      2.1 If next match is in the next minute then roll forwards
-
      3 If minute matches move on, otherwise find the next match
      3.1 If next match is in the next hour then roll forwards
      3.2 Reset the seconds and go to 2
-
      4 If hour matches move on, otherwise find the next match
      4.1 If next match is in the next day then roll forwards,
      4.2 Reset the minutes and seconds and go to 2
-
      ...
      */
     if (!expr) return CRON_INVALID_INSTANT;

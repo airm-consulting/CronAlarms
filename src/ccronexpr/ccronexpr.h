@@ -30,6 +30,10 @@
 extern "C" {
 #endif
 
+#if defined(__AVR__)
+#define NO_MALLOC 1
+#endif
+
 #ifndef ANDROID
 #include <time.h>
 #else /* ANDROID */
@@ -61,8 +65,11 @@ typedef struct {
  *        error message in case of error. Will be set to NULL on success.
  *        The error message should NOT be freed by client.
  */
+#if defined(NO_MALLOC)
+void cron_parse_expr(char* expression, cron_expr* target, const char** error);
+#else
 void cron_parse_expr(const char* expression, cron_expr* target, const char** error);
-
+#endif
 /**
  * Uses the specified expression to calculate the next 'fire' date after
  * the specified date. All dates are processed as UTC (GMT) dates 
@@ -85,7 +92,7 @@ time_t cron_next(cron_expr* expr, time_t date);
  * @param date start date to start calculation from
  * @return previous 'fire' date in case of success, '((time_t) -1)' in case of error.
  */
-//time_t cron_prev(cron_expr* expr, time_t date);
+time_t cron_prev(cron_expr* expr, time_t date);
 
 
 #if defined(__cplusplus) && !defined(CRON_COMPILE_AS_CXX)
